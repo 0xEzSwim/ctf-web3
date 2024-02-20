@@ -5,6 +5,8 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "../DamnValuableToken.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @title PuppetPool
  * @author Damn Vulnerable DeFi (https://damnvulnerabledefi.xyz)
@@ -33,8 +35,9 @@ contract PuppetPool is ReentrancyGuard {
     function borrow(uint256 amount, address recipient) external payable nonReentrant {
         uint256 depositRequired = calculateDepositRequired(amount);
 
-        if (msg.value < depositRequired)
+        if (msg.value < depositRequired) {
             revert NotEnoughCollateral();
+        }
 
         if (msg.value > depositRequired) {
             unchecked {
@@ -47,8 +50,9 @@ contract PuppetPool is ReentrancyGuard {
         }
 
         // Fails if the pool doesn't have enough tokens in liquidity
-        if(!token.transfer(recipient, amount))
+        if (!token.transfer(recipient, amount)) {
             revert TransferFailed();
+        }
 
         emit Borrowed(msg.sender, recipient, depositRequired, amount);
     }

