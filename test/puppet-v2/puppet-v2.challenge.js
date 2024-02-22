@@ -20,7 +20,7 @@ describe('[Challenge] Puppet v2', function () {
     const POOL_INITIAL_TOKEN_BALANCE = 1000000n * 10n ** 18n;
 
     before(async function () {
-        /** SETUP SCENARIO - NO NEED TO CHANGE ANYTHING HERE */  
+        /** SETUP SCENARIO - NO NEED TO CHANGE ANYTHING HERE */
         [deployer, player] = await ethers.getSigners();
 
         await setBalance(player.address, PLAYER_INITIAL_ETH_BALANCE);
@@ -29,7 +29,7 @@ describe('[Challenge] Puppet v2', function () {
         const UniswapFactoryFactory = new ethers.ContractFactory(factoryJson.abi, factoryJson.bytecode, deployer);
         const UniswapRouterFactory = new ethers.ContractFactory(routerJson.abi, routerJson.bytecode, deployer);
         const UniswapPairFactory = new ethers.ContractFactory(pairJson.abi, pairJson.bytecode, deployer);
-    
+
         // Deploy tokens to be traded
         token = await (await ethers.getContractFactory('DamnValuableToken', deployer)).deploy();
         weth = await (await ethers.getContractFactory('WETH', deployer)).deploy();
@@ -39,7 +39,7 @@ describe('[Challenge] Puppet v2', function () {
         uniswapRouter = await UniswapRouterFactory.deploy(
             uniswapFactory.address,
             weth.address
-        );        
+        );
 
         // Create Uniswap pair against WETH and add liquidity
         await token.approve(
@@ -59,7 +59,7 @@ describe('[Challenge] Puppet v2', function () {
             await uniswapFactory.getPair(token.address, weth.address)
         );
         expect(await uniswapExchange.balanceOf(deployer.address)).to.be.gt(0);
-            
+
         // Deploy the lending pool
         lendingPool = await (await ethers.getContractFactory('PuppetV2Pool', deployer)).deploy(
             weth.address,
@@ -83,6 +83,13 @@ describe('[Challenge] Puppet v2', function () {
 
     it('Execution', async function () {
         /** CODE YOUR SOLUTION HERE */
+        console.log("Player DVT balance: ", await token.balanceOf(player.address));
+        console.log("Player WETH balance: ", await weth.balanceOf(player.address));
+        attacker = await (await ethers.getContractFactory('PuppetPoolV2Attack', deployer)).deploy(lendingPool.address, uniswapExchange.address, weth.address, token.address);
+        await token.connect(player).approve(attacker.address, PLAYER_INITIAL_TOKEN_BALANCE);
+        await attacker.connect(player).launchAttack(PLAYER_INITIAL_TOKEN_BALANCE, { value: PLAYER_INITIAL_ETH_BALANCE - 1n * 10n ** 17n });
+        console.log("Player DVT balance: ", await token.balanceOf(player.address));
+        console.log("Player WETH balance: ", await weth.balanceOf(player.address));
     });
 
     after(async function () {
