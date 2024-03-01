@@ -36,6 +36,7 @@ contract ClimberTimelock is ClimberTimelockBase {
         delay = 1 hours;
     }
 
+    // @audit if we can schedule an operation on behalf of the proposer (e.g through a smart contract that will do a sneaky ClimberTimelock::schedual() call)
     function schedule(
         address[] calldata targets,
         uint256[] calldata values,
@@ -85,6 +86,7 @@ contract ClimberTimelock is ClimberTimelockBase {
 
         bytes32 id = getOperationId(targets, values, dataElements, salt);
 
+        // @audit Re-entrancy attack possible here!
         for (uint8 i = 0; i < targets.length;) {
             targets[i].functionCallWithValue(dataElements[i], values[i]);
             unchecked {
@@ -103,7 +105,7 @@ contract ClimberTimelock is ClimberTimelockBase {
         if (msg.sender != address(this)) {
             revert CallerNotTimelock();
         }
-
+        // @audit no check for minimum daly ?
         if (newDelay > MAX_DELAY) {
             revert NewDelayAboveMax();
         }

